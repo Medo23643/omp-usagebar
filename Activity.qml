@@ -32,7 +32,7 @@ Item {
     id: pgrepProcess
     command: [
       "sh", "-c",
-      "if ps -e -o pid,args | grep -E '(/|\\s|^)omp(\\s|$)' | grep -v -E '((/|\\s|^)omp\\s+(stats|usage|models|completions|config|plugin|install|update|gc)|omp\\.usagebar|open-dashboard\\.sh|timeout\\s+[0-9]+\\s+omp|grep)' >/dev/null 2>&1; then recent=$(find ~/.omp/agent/sessions -name '*.jsonl' -newermt '-4 seconds' 2>/dev/null | head -1); if [ -n \"$recent\" ]; then echo '1'; fi; fi"
+      "if ps -e -o pid,args | grep -E '(/|\\s|^)omp(\\s|$)' | grep -v -E '((/|\\s|^)omp\\s+(stats|usage|models|completions|config|plugin|install|update|gc)|omp\\.usagebar|open-dashboard\\.sh|crash-monitor\\.sh|timeout\\s+[0-9]+\\s+omp|grep)' >/dev/null 2>&1; then recent=$(find ~/.omp/agent/sessions -name '*.jsonl' -newermt '-4 seconds' 2>/dev/null | head -1); if [ -n \"$recent\" ]; then echo '1'; fi; fi"
     ]
     running: false
 

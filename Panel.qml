@@ -16,6 +16,7 @@ Panel {
 
   property double nowMs: Date.now()
   property bool paused: false
+  property bool sentinelEnabled: true
 
   Main {
     id: usage
@@ -23,6 +24,7 @@ Panel {
     panelOpen: root.opened
     isActive: activityDetector.active
     paused: root.paused
+    sentinelEnabled: root.sentinelEnabled
   }
 
   Activity {
@@ -341,7 +343,18 @@ Panel {
             Layout.fillWidth: true
           }
 
-          // Middle-Right: Pause / Resume Button
+          // Crash Sentinel Toggle Button
+          PanelActionButton {
+            iconText: "󰒄"
+            tooltipText: root.sentinelEnabled ? "Crash Sentinel: Active (click to disable)" : "Crash Sentinel: Disabled (click to enable)"
+            hoverColor: root.sentinelEnabled ? Color.urgent : Color.accent
+            foreground: root.sentinelEnabled ? Util.alpha(Color.popups.text, 0.55) : Color.urgent
+            fontSize: 12
+            size: Style.space(20)
+            onClicked: root.sentinelEnabled = !root.sentinelEnabled
+          }
+
+          // Pause / Resume Button
           PanelActionButton {
             iconText: root.paused ? "󰐥" : "󰏤"
             tooltipText: root.paused ? "Resume OMP monitoring" : "Pause OMP monitoring"

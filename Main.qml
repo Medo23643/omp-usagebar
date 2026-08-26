@@ -150,6 +150,40 @@ Item {
     }
   }
 
+  property bool sentinelEnabled: true
+
+  onSentinelEnabledChanged: {
+    if (sentinelEnabled) {
+      Quickshell.execDetached(["sh", "-c", "rm -f ~/.cache/omp-crash-sentinel-disabled; pkill -f crash-monitor.sh 2>/dev/null || true"])
+    } else {
+      Quickshell.execDetached(["sh", "-c", "touch ~/.cache/omp-crash-sentinel-disabled; pkill -f crash-monitor.sh 2>/dev/null || true"])
+    }
+  }
+
+  // 3. Crash Sentinel Daemon Process
+  Process {
+    id: crashMonitorProcess
+    command: ["bash", Qt.resolvedUrl("crash-monitor.sh").toString().replace("file://", "")]
+    running: root.sentinelEnabled && !root.paused
+
+    onExited: function(exitCode) {
+      if (root.sentinelEnabled && !root.paused) {
+        crashRestartTimer.start()
+      }
+    }
+  }
+
+  Timer {
+    id: crashRestartTimer
+    interval: 5000
+    repeat: false
+    onTriggered: {
+      if (root.sentinelEnabled && !root.paused && !crashMonitorProcess.running) {
+        crashMonitorProcess.running = true
+      }
+    }
+  }
+
   function refresh() {
     if (root.paused) return
     if (!ompProcess.running) {
