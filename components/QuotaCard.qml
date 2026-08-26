@@ -94,15 +94,15 @@ ColumnLayout {
   }
 
   function formatBootTokens(n) {
-    if (!n || n <= 0) return "0 Tks"
+    if (!n || n <= 0) return "Tokens since boot : 0"
     if (n >= 1000000) {
       var m = n / 1000000
-      return (m >= 100 ? m.toFixed(0) : (m >= 10 ? m.toFixed(1) : m.toFixed(2))) + "M Tks"
+      return "Tokens since boot : " + (m >= 100 ? m.toFixed(0) : (m >= 10 ? m.toFixed(1) : m.toFixed(2))) + " M"
     }
     if (n >= 1000) {
       var k = n / 1000
-      return (k >= 100 ? k.toFixed(0) : (k >= 10 ? k.toFixed(1) : k.toFixed(1))) + "K Tks"
+      return "Tokens since boot : " + (k >= 100 ? k.toFixed(0) : (k >= 10 ? k.toFixed(1) : k.toFixed(1))) + " K"
     }
-    return n + " Tks"
+    return "Tokens since boot : " + n
   }
 }

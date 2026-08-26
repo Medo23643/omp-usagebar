@@ -15,21 +15,24 @@ Panel {
   implicitHeight: button.implicitHeight
 
   property double nowMs: Date.now()
+  property bool paused: false
 
   Main {
     id: usage
     settings: root.settings
     panelOpen: root.opened
     isActive: activityDetector.active
+    paused: root.paused
   }
 
   Activity {
     id: activityDetector
+    paused: root.paused
   }
 
   Timer {
     interval: 30000
-    running: root.opened
+    running: root.opened && !root.paused
     repeat: true
     onTriggered: root.nowMs = Date.now()
   }
@@ -43,8 +46,8 @@ Panel {
     bar: root.bar
     text: ""
     hasVisualContent: true
-    active: usage.allExhausted
-    fixedWidth: vertical ? -1 : (activityDetector.active ? (slotSize + Style.space(32)) : slotSize)
+    active: usage.allExhausted && !root.paused
+    fixedWidth: vertical ? -1 : (activityDetector.active && !root.paused ? (slotSize + Style.space(32)) : slotSize)
 
     Behavior on fixedWidth {
       NumberAnimation {
@@ -63,7 +66,7 @@ Panel {
         id: robotContainer
         width: button.slotSize
         height: parent.height
-        x: activityDetector.active ? 0 : Math.max(0, (parent.width - width) / 2)
+        x: (activityDetector.active && !root.paused) ? 0 : Math.max(0, (parent.width - width) / 2)
 
         Behavior on x {
           NumberAnimation {
@@ -94,7 +97,7 @@ Panel {
         anchors.leftMargin: Style.space(2)
         width: Style.space(26)
         height: parent.height
-        opacity: activityDetector.active ? 1.0 : 0.0
+        opacity: (activityDetector.active && !root.paused) ? 1.0 : 0.0
         visible: opacity > 0
 
         Behavior on opacity {
@@ -106,7 +109,7 @@ Panel {
 
         ActivityBars {
           anchors.centerIn: parent
-          active: activityDetector.active
+          active: activityDetector.active && !root.paused
           dotColor: button.foreground
         }
       }
@@ -124,10 +127,12 @@ Panel {
   // ═══════════════════════════════════════════
   // ICON COLOR RESOLVER
   // ═══════════════════════════════════════════
+  // - GREYISH (muted): When monitoring is paused by the user.
   // - RED (urgent): Only when ALL providers are expired/exhausted.
   // - YELLOW (warning): When at least one is expired, but others are still available.
   // - FOREGROUND (normal): When all providers are available and healthy.
   readonly property color iconColor: {
+    if (root.paused) return Util.alpha(button.foreground, 0.38);
     if (usage.allExhausted) return Color.urgent;
     if (usage.anyExhausted || usage.maxUsedPercentage >= 80) return "#e5c07b";
     return button.foreground;
@@ -190,7 +195,7 @@ Panel {
 
               // Working indicator on the right of the title
               RowLayout {
-                visible: activityDetector.active
+                visible: activityDetector.active && !root.paused
                 spacing: Style.space(5)
 
                 ActivityBars {
@@ -204,6 +209,15 @@ Panel {
                   font.italic: true
                   color: Color.accent
                 }
+              }
+
+              // Paused badge
+              Text {
+                visible: root.paused
+                text: "Paused"
+                font.pixelSize: 10
+                font.bold: true
+                color: Util.alpha(Color.popups.text, 0.45)
               }
             }
 
@@ -232,7 +246,7 @@ Panel {
 
         // ERROR BANNER (if any)
         ColumnLayout {
-          visible: usage.hasError
+          visible: usage.hasError && !root.paused
           Layout.fillWidth: true
           spacing: 2
 
@@ -302,23 +316,55 @@ Panel {
           }
         }
 
-        // FOOTER SEPARATOR & INFO
+        // FOOTER SEPARATOR
         Rectangle {
           Layout.fillWidth: true
           height: 1
           color: Util.alpha(Color.popups.text, 0.12)
         }
 
-        Text {
-          text: {
-            if (usage.lastFetchedMs <= 0) return "Not updated yet"
-            var d = new Date(usage.lastFetchedMs)
-            var timeStr = Qt.formatTime(d, "HH:mm:ss")
-            return "Last updated · " + timeStr + (usage.isStale ? " · stale" : "")
+        // FOOTER ACTIONS ROW
+        RowLayout {
+          Layout.fillWidth: true
+          spacing: Style.space(6)
+
+          // Left: Last updated timestamp
+          Text {
+            text: {
+              if (usage.lastFetchedMs <= 0) return "Not updated yet"
+              var d = new Date(usage.lastFetchedMs)
+              var timeStr = Qt.formatTime(d, "HH:mm:ss")
+              return "Last updated · " + timeStr + (root.paused ? " · paused" : (usage.isStale ? " · stale" : ""))
+            }
+            font.pixelSize: 9
+            color: Util.alpha(Color.popups.text, 0.45)
+            Layout.fillWidth: true
           }
-          font.pixelSize: 9
-          color: Util.alpha(Color.popups.text, 0.4)
-          Layout.alignment: Qt.AlignHCenter
+
+          // Middle-Right: Pause / Resume Button
+          PanelActionButton {
+            iconText: root.paused ? "󰐥" : "󰏤"
+            tooltipText: root.paused ? "Resume OMP monitoring" : "Pause OMP monitoring"
+            hoverColor: root.paused ? Color.accent : Color.urgent
+            foreground: root.paused ? Color.urgent : Util.alpha(Color.popups.text, 0.55)
+            fontSize: 12
+            size: Style.space(20)
+            onClicked: root.paused = !root.paused
+          }
+
+          // Far-Right: Full OMP Stats & Graphs Dashboard Button
+          PanelActionButton {
+            iconText: ""
+            tooltipText: "Open OMP stats & graphs dashboard"
+            hoverColor: Color.accent
+            foreground: Util.alpha(Color.popups.text, 0.55)
+            fontSize: 12
+            size: Style.space(20)
+            onClicked: {
+              Util.execDetached("bash ~/.config/omarchy/plugins/omp.usagebar/open-dashboard.sh")
+              root.close()
+            }
+          }
         }
       }
     }

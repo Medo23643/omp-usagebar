@@ -15,6 +15,13 @@ Item {
   property bool isStale: false
   property double bootTimeMs: 0
   property string todayDateStr: Qt.formatDate(new Date(), "yyyy-MM-dd")
+  property bool paused: false
+
+  onPausedChanged: {
+    if (!paused) {
+      refresh()
+    }
+  }
 
   // Parsed data model
   property string providerLabel: "OMP Usage"
@@ -43,9 +50,11 @@ Item {
   Timer {
     id: pollTimer
     interval: root.pollInterval
-    running: true
+    running: !root.paused
     repeat: true
-    onTriggered: root.refresh()
+    onTriggered: {
+      if (!root.paused) root.refresh()
+    }
   }
 
   // 0. Uptime detector for session tracking
@@ -142,6 +151,7 @@ Item {
   }
 
   function refresh() {
+    if (root.paused) return
     if (!ompProcess.running) {
       root.loading = true
       ompProcess.running = true
