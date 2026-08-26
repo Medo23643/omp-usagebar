@@ -275,7 +275,7 @@ Panel {
           }
 
           Text {
-            text: "TOKENS"
+            text: "TOKENS SINCE " + usage.todayDateStr + " 00:00"
             font.pixelSize: 10
             font.bold: true
             font.letterSpacing: 1

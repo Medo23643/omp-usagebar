@@ -2,8 +2,6 @@
 
 A native, theme-aware Omarchy Quattro plugin providing a real-time visual indicator and dashboard for **[Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi)** AI usage, quota tracking, and activity state.
 
-![OMP Usagebar Preview](assets/preview.png)
-
 ---
 
 ## ✨ Features
@@ -51,8 +49,6 @@ omp-usagebar/
 │   ├── QuotaCard.qml              # Full-width quota meters & reset countdowns
 │   ├── SeverityProgressBar.qml    # Theme & severity-colored meter bar
 │   └── TokenRow.qml               # Formatted token consumption rows
-├── assets/
-│   └── preview.png                # Dashboard preview screenshot
 └── README.md
 ```
 
@@ -63,12 +59,6 @@ omp-usagebar/
 - **Inspiration**: Inspired by **[ai-usagebar](https://github.com/akitaonrails/ai-usagebar)** by [@akitaonrails](https://github.com/akitaonrails) — thank you for pioneering beautiful AI quota monitoring on the Linux desktop!
 - **AI Agent**: Built for **[Oh My Pi (OMP)](https://github.com/can1357/oh-my-pi)** by [@can1357](https://github.com/can1357).
 - **Desktop Environment**: Built for **[Omarchy Quattro](https://omarchy.org)** and **[Quickshell](https://quickshell.org)**.
-
----
-
-## 👤 Author
-
-- **Mohammed** ([@Medo23643](https://github.com/Medo23643))
 
 ---
 

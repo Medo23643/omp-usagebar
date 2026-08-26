@@ -13,12 +13,15 @@ Item {
   property string errorMessage: ""
   property double lastFetchedMs: 0
   property bool isStale: false
+  property double bootTimeMs: 0
+  property string todayDateStr: Qt.formatDate(new Date(), "yyyy-MM-dd")
 
   // Parsed data model
   property string providerLabel: "OMP Usage"
   property string accountEmail: ""
   property var quotaPools: []
   property var tokensList: []
+  property var tokensByPool: ({})
   property int totalTokens: 0
   property double maxUsedPercentage: 0.0
 
@@ -45,6 +48,23 @@ Item {
     onTriggered: root.refresh()
   }
 
+  // 0. Uptime detector for session tracking
+  Process {
+    id: uptimeProcess
+    command: ["sh", "-c", "cut -d. -f1 /proc/uptime 2>/dev/null || echo 0"]
+    running: true
+
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var secs = Number(this.text.trim()) || 0
+        if (secs > 0) {
+          root.bootTimeMs = Date.now() - (secs * 1000)
+        }
+      }
+    }
+  }
+
   // 1. Quota limits process
   Process {
     id: ompProcess
@@ -63,8 +83,17 @@ Item {
           return
         }
 
+        var start = rawText.indexOf("{")
+        var end = rawText.lastIndexOf("}")
+        if (start < 0 || end <= start) {
+          root.hasError = true
+          root.errorMessage = "No valid JSON found in omp usage output"
+          root.isStale = true
+          return
+        }
+
         try {
-          var data = JSON.parse(rawText)
+          var data = JSON.parse(rawText.slice(start, end + 1))
           root.parsePayload(data)
           root.hasError = false
           root.errorMessage = ""
@@ -99,8 +128,11 @@ Item {
       onStreamFinished: {
         var rawText = this.text.trim()
         if (!rawText) return
+        var start = rawText.indexOf("{")
+        var end = rawText.lastIndexOf("}")
+        if (start < 0 || end <= start) return
         try {
-          var data = JSON.parse(rawText)
+          var data = JSON.parse(rawText.slice(start, end + 1))
           root.parseStats(data)
         } catch (e) {
           // Non-fatal, token stats optional
@@ -137,26 +169,57 @@ Item {
     if (!data) return
     var items = []
     var total = 0
+    var poolTokens = {}
 
+    // 1. Calculate today's totals per model (since 00:00)
     if (data.byModel && Array.isArray(data.byModel)) {
       for (var i = 0; i < data.byModel.length; i++) {
         var m = data.byModel[i]
-        var count = (m.totalInputTokens || 0) + (m.totalOutputTokens || 0)
+        var inputTokens = Number(m.totalInputTokens || 0)
+        var outputTokens = Number(m.totalOutputTokens || 0)
+        var count = inputTokens + outputTokens
         if (count > 0) {
           total += count
           items.push({
             label: formatModelLabel(m.model),
             count: count
           })
+
+          // Map to pool name
+          var mName = (m.model || "").toLowerCase()
+          if (mName.indexOf("gemini") >= 0 || mName.indexOf("google") >= 0) {
+            poolTokens["GEMINI"] = (poolTokens["GEMINI"] || 0) + count
+          } else if (mName.indexOf("claude") >= 0 || mName.indexOf("anthropic") >= 0) {
+            poolTokens["CLAUDE"] = (poolTokens["CLAUDE"] || 0) + count
+          } else if (mName.indexOf("gpt") >= 0 || mName.indexOf("openai") >= 0) {
+            poolTokens["GPT-OSS"] = (poolTokens["GPT-OSS"] || 0) + count
+          } else if (mName.indexOf("glm") >= 0 || mName.indexOf("zai") >= 0) {
+            poolTokens["ZAI"] = (poolTokens["ZAI"] || 0) + count
+          }
         }
       }
     }
 
-    // Sort tokens descending (most consumed on top)
+    // Sort tokens descending
     items.sort(function(a, b) { return b.count - a.count })
 
     root.tokensList = items
     root.totalTokens = total
+    root.tokensByPool = poolTokens
+
+    // Update quota pools with session tokens immediately
+    if (root.quotaPools && root.quotaPools.length > 0) {
+      var updated = []
+      for (var p = 0; p < root.quotaPools.length; p++) {
+        var pool = root.quotaPools[p]
+        var pToks = poolTokens[pool.name] || 0
+        if (pool.windows && pool.windows.length > 0) {
+          pool.windows[0].sessionTokens = pToks
+        }
+        updated.push(pool)
+      }
+      root.quotaPools = updated
+    }
   }
 
   function formatProviderName(id, label, provider) {
@@ -237,6 +300,8 @@ Item {
           maxUsed = usedPct
         }
 
+        var cachedToks = (root.tokensByPool && root.tokensByPool[poolName]) ? root.tokensByPool[poolName] : 0
+
         pools.push({
           name: poolName,
           provider: pName,
@@ -245,7 +310,8 @@ Item {
             usedPercent: usedPct,
             resetsAt: lim.window ? lim.window.resetsAt : 0,
             isExhausted: isExhausted,
-            isUnmetered: false
+            isUnmetered: false,
+            sessionTokens: cachedToks
           }]
         })
       }
@@ -258,6 +324,8 @@ Item {
       var accProvider = (acc.provider || "PROVIDER").toUpperCase()
       if (acc.email && emails.indexOf(acc.email) < 0) emails.push(acc.email)
 
+      var accCachedToks = (root.tokensByPool && root.tokensByPool[accProvider]) ? root.tokensByPool[accProvider] : 0
+
       pools.push({
         name: accProvider,
         provider: acc.provider,
@@ -266,7 +334,8 @@ Item {
           usedPercent: 0,
           resetsAt: 0,
           isExhausted: false,
-          isUnmetered: true
+          isUnmetered: true,
+          sessionTokens: accCachedToks
         }]
       })
     }

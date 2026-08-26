@@ -51,16 +51,28 @@ ColumnLayout {
         percentage: modelData.usedPercent
       }
 
-      // Subtitle Line: Window label + Reset countdown / Info
-      Text {
-        text: {
-          if (modelData.isUnmetered) return "Unmetered · Available"
-          var windowLabel = modelData.label ? (modelData.label.charAt(0) + modelData.label.slice(1).toLowerCase()) : "Daily"
-          return windowLabel + " · " + root.formatResetCountdown(modelData.resetsAt)
-        }
-        font.pixelSize: 10
-        color: Util.alpha(Color.popups.text, 0.5)
+      // Subtitle Line: Window label + Reset countdown on left, Session tokens on right
+      RowLayout {
         Layout.fillWidth: true
+
+        Text {
+          text: {
+            if (modelData.isUnmetered) return "Unmetered · Available"
+            var windowLabel = modelData.label ? (modelData.label.charAt(0) + modelData.label.slice(1).toLowerCase()) : "Daily"
+            return windowLabel + " · " + root.formatResetCountdown(modelData.resetsAt)
+          }
+          font.pixelSize: 10
+          color: Util.alpha(Color.popups.text, 0.5)
+          Layout.fillWidth: true
+        }
+
+        Text {
+          visible: !!modelData.sessionTokens && modelData.sessionTokens > 0
+          text: root.formatBootTokens(modelData.sessionTokens)
+          font.pixelSize: 10
+          color: Util.alpha(Color.popups.text, 0.6)
+          horizontalAlignment: Text.AlignRight
+        }
       }
     }
   }
@@ -79,5 +91,18 @@ ColumnLayout {
     if (days > 0) return "resets in " + days + "d " + hours + "h"
     if (hours > 0) return "resets in " + hours + "h " + mins + "m"
     return "resets in " + mins + "m"
+  }
+
+  function formatBootTokens(n) {
+    if (!n || n <= 0) return "0 Tks"
+    if (n >= 1000000) {
+      var m = n / 1000000
+      return (m >= 100 ? m.toFixed(0) : (m >= 10 ? m.toFixed(1) : m.toFixed(2))) + "M Tks"
+    }
+    if (n >= 1000) {
+      var k = n / 1000
+      return (k >= 100 ? k.toFixed(0) : (k >= 10 ? k.toFixed(1) : k.toFixed(1))) + "K Tks"
+    }
+    return n + " Tks"
   }
 }
