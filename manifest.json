@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "omp.usagebar",
+  "name": "OMP Usage",
+  "version": "1.0.0",
+  "author": "Medo23643",
+  "license": "MIT",
+  "description": "Native Omarchy Quattro bar widget and dashboard for Oh My Pi (OMP) AI usage and activity.",
+  "kinds": ["bar-widget"],
+  "activation": "always",
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "OMP Usage",
+    "description": "Top-bar AI indicator and detailed quota/token dashboard for OMP.",
+    "category": "AI",
+    "aliases": ["omp", "omp-usage", "ai-usage"],
+    "allowMultiple": false,
+    "defaults": {
+      "idlePollIntervalSec": 60,
+      "panelPollIntervalSec": 5,
+      "activePollIntervalSec": 3
+    }
+  }
+}
